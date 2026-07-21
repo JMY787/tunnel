@@ -7,49 +7,75 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [token, setToken] = useState();
   const [location, setLocation] = useState("GATE");
-  const [message, setMessage] = useState()
+  const [message, setMessage] = useState("");
 
-  // TODO: signup
-  const signup = async (newUser)=>{
+  const signup = async (username) => {
     try {
-      const req = await fetch('https://fsa-jwt-practice.herokuapp.com/signup', {
-        method:"POST",
-        headers :{ 
-                  "Content-Type": "application/json" 
-                },
-        body:JSON.stringify(newUser)
-      })
-      const res = await req.json()
-      setToken(res.token)
-      setMessage(res.message)
-      setLocation("TABLET")
-    } catch (error) {
-      console.log(error.message)
-    }
-  }
-
-  // TODO: authenticate
-
-  const authenticate = async()=>{
-    const req = await fetch('https://fsa-jwt-practice.herokuapp.com/authenticate',  { 
-        method: "GET", 
-        headers: { 
+      const req = await fetch(`${API}/signup`, {
+        method: "POST",
+        headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` 
-        }
-    })
-    const data = await req.json()
-    setMessage(data.message)
-    setLocation("TUNNEL")
+        },
+        body: JSON.stringify({
+          username,
+        }),
+      });
 
-  }
+      const res = await req.json();
 
-  const value = { location, signup, authenticate };
+      if (!req.ok) {
+        throw new Error(res.message);
+      }
+
+      setToken(res.token);
+      setMessage(res.message);
+      setLocation("TABLET");
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
+  const authenticate = async () => {
+    if (!token) {
+      throw new Error("No token found");
+    }
+
+    try {
+      const req = await fetch(`${API}/authenticate`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const res = await req.json();
+
+      if (!req.ok) {
+        throw new Error(res.message);
+      }
+
+      setMessage(res.message);
+      setLocation("TUNNEL");
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
+  const value = {
+    location,
+    signup,
+    authenticate,
+    message,
+  };
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) throw Error("useAuth must be used within an AuthProvider");
+
+  if (!context) {
+    throw Error("useAuth must be used within an AuthProvider");
+  }
+
   return context;
 }
